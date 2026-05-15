@@ -75,7 +75,7 @@ def run_preprocessing_and_training():
         print(f"Total tokens after cleaning: {total_tokens}")
 
         # Determine epochs dynamically based on corpus size
-        current_epochs = 3 if party == "gruene" else 7
+        current_epochs = 4 if party == "gruene" else 6
         print(f"Training Word2Vec model for {current_epochs} epochs...")
 
         # Training the Word2Vec model
