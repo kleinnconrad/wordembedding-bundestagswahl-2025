@@ -74,6 +74,10 @@ def run_preprocessing_and_training():
         print(f"Total unique context windows: {len(processed_sentences)}")
         print(f"Total tokens after cleaning: {total_tokens}")
 
+        # Determine epochs dynamically based on corpus size
+        current_epochs = 3 if party == "gruene" else 7
+        print(f"Training Word2Vec model for {current_epochs} epochs...")
+
         # Training the Word2Vec model
         # Using Skip-gram (sg=1) is often better for smaller, high-quality datasets
         model = Word2Vec(
@@ -83,7 +87,7 @@ def run_preprocessing_and_training():
             min_count=2,
             workers=4,
             sg=1,
-            epochs=5  # 5 epochs helps stabilize vector weights on smaller corpora
+            epochs=current_epochs  
         )
         
         model_save_path = os.path.join(MODELS_DIR, f"{party}.model")
