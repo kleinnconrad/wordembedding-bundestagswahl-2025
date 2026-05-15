@@ -1,4 +1,4 @@
-# Political Word Embeddings: Election Programs
+# Political Word Embeddings: Election Programs Bundestagswahl 2025
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/kleinnconrad/wordembedding-landtagswahl-bw-2026/tree/main)
 
