@@ -13,6 +13,7 @@
             --node-input: #58a6ff;
             --node-hidden: #bc8cff;
             --node-target: #3fb950;
+            --loss-color: #ff7b72;
             --vector-1: #bc8cff;
             --vector-2: #ff7b72;
             --line-idle: #30363d;
@@ -35,7 +36,7 @@
             border: 1px solid #30363d;
             border-radius: 12px;
             padding: 2rem;
-            width: 950px;
+            width: 1000px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.8);
         }
 
@@ -90,7 +91,7 @@
 
         svg {
             width: 100%;
-            height: 480px;
+            height: 520px;
             background: #0d1117;
             border-radius: 8px;
             border: 1px solid #30363d;
@@ -103,17 +104,37 @@
         .node-input circle { stroke: var(--node-input); }
         .node-hidden circle { stroke: var(--node-hidden); }
         .node-target circle { stroke: var(--node-target); }
+        .node-noise circle { stroke: #30363d; }
         
         .link { stroke: var(--line-idle); stroke-width: 1.5px; fill: none; transition: opacity 0.5s; }
         .label { fill: var(--text-muted); font-size: 12px; text-anchor: middle; letter-spacing: 1px; font-weight: bold; }
+        .math-label { fill: #8b949e; font-size: 11px; font-family: monospace; }
+        .super-label { fill: var(--node-target); font-size: 12px; font-weight: bold; }
+        .noise-label { fill: #484f58; font-size: 11px; }
 
         /* Step 1 Animation */
-        .step-1 .link-flow {
+        .step-1 .link-flow-active {
             stroke: var(--node-target);
             stroke-width: 2.5px;
             stroke-dasharray: 8;
             animation: flowAnim 0.8s linear infinite;
         }
+        
+        .step-1 .link-flow-hidden {
+            stroke: var(--node-hidden);
+            stroke-width: 2px;
+            stroke-dasharray: 6;
+            animation: flowAnim 1s linear infinite;
+        }
+
+        .step-1 .backprop-flow {
+            stroke: var(--loss-color);
+            stroke-width: 2px;
+            stroke-dasharray: 5;
+            animation: flowAnimBack 1.5s linear infinite;
+            opacity: 0.8;
+        }
+
         .step-1 .node-input circle { fill: rgba(88, 166, 255, 0.2); }
         .step-1 .node-hidden circle { fill: rgba(188, 140, 255, 0.2); }
         .step-1 .node-target circle { fill: rgba(63, 185, 80, 0.2); }
@@ -121,6 +142,11 @@
         @keyframes flowAnim {
             from { stroke-dashoffset: 16; }
             to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes flowAnimBack {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: 20; }
         }
 
         /* Step 2 Animation */
@@ -148,26 +174,38 @@
         </div>
 
         <div class="controls">
-            <button id="btn1" class="active" onclick="setStep(1)">1. Predict Context (Window=5)</button>
+            <button id="btn1" class="active" onclick="setStep(1)">1. Training (Loss Optimization)</button>
             <button id="btn2" onclick="setStep(2)">2. Extract Word Vector</button>
             <button id="btn3" onclick="setStep(3)">3. Cosine Distance</button>
         </div>
 
         <div class="info-box" id="infoText">
-            <strong>Training Phase:</strong> The neural network reads the center word ("sicherheit"). Because <code>window=5</code>, it attempts to predict the 5 specific words before it and the 5 specific words after it simultaneously.
-        </div>
+            </div>
 
         <svg id="svgCanvas">
             <g id="networkView">
-                <text x="150" y="450" class="label">INPUT</text>
-                <text x="450" y="450" class="label">HIDDEN LAYER (100D)</text>
-                <text x="750" y="450" class="label">OUTPUT (CONTEXT = 5)</text>
+                <text x="120" y="470" class="label">INPUT LAYER</text>
+                <text x="380" y="470" class="label">HIDDEN LAYER (100D)</text>
+                <text x="650" y="470" class="label">OUTPUT LAYER</text>
 
-                <rect id="extractionBox" x="380" y="30" width="140" height="380" rx="10" class="box-highlight hidden-view"></rect>
-                <text id="extractionText" x="450" y="430" class="vector-text hidden-view">Word Vector [0.12, -0.4, ...]</text>
+                <rect id="extractionBox" x="310" y="30" width="140" height="400" rx="10" class="box-highlight hidden-view"></rect>
+                <text id="extractionText" x="380" y="450" class="vector-text hidden-view">Word Vector [0.12, -0.4...]</text>
 
                 <g id="linksGroup"></g>
                 <g id="nodesGroup"></g>
+
+                <g id="mathGroup" class="hidden-view">
+                    <rect x="780" y="160" width="190" height="120" fill="#21262d" stroke="var(--loss-color)" stroke-width="2" rx="8" />
+                    <text x="875" y="185" fill="var(--loss-color)" font-weight="bold" font-size="14" text-anchor="middle">Loss Function</text>
+                    <text x="875" y="210" fill="#c9d1d9" font-size="12" text-anchor="middle">Compare Output (ŷ)</text>
+                    <text x="875" y="225" fill="#c9d1d9" font-size="12" text-anchor="middle">with True Label (y)</text>
+                    <text x="875" y="250" fill="var(--loss-color)" font-family="monospace" font-size="11" text-anchor="middle">L = -Σ y log(ŷ)</text>
+                    <text x="875" y="265" fill="#8b949e" font-size="10" text-anchor="middle">(Cross-Entropy)</text>
+
+                    <path d="M 780 200 Q 550 500 380 430" fill="none" class="backprop-flow" />
+                    <path d="M 380 430 Q 250 350 120 250" fill="none" class="backprop-flow" />
+                    <text x="500" y="450" fill="var(--loss-color)" font-size="12" font-weight="bold" class="fade-out" style="opacity: 0.8;">Optimize Weights (Backpropagation)</text>
+                </g>
             </g>
 
             <g id="cosineView" class="hidden-view">
@@ -185,10 +223,6 @@
                 <circle cx="550" cy="150" r="6" fill="var(--vector-2)" />
                 <text x="565" y="145" fill="var(--vector-2)" font-size="16px" font-weight="bold">"kriminalität"</text>
 
-                <line x1="150" y1="400" x2="250" y2="100" class="vector-line" stroke="#8b949e" />
-                <circle cx="250" cy="100" r="6" fill="#8b949e" />
-                <text x="265" y="95" fill="#8b949e" font-size="16px">"steuern"</text>
-
                 <rect x="550" y="300" width="300" height="90" fill="#161b22" stroke="#30363d" rx="8" />
                 <text x="570" y="330" class="math-text">Cosine Similarity = cos(θ)</text>
                 <text x="570" y="355" class="math-text">Small θ  => High Similarity</text>
@@ -205,52 +239,55 @@
         const extractionBox = document.getElementById('extractionBox');
         const extractionText = document.getElementById('extractionText');
         const infoText = document.getElementById('infoText');
+        const mathGroup = document.getElementById('mathGroup');
 
-        // Setup Window=5 Target Words (Sentence: "wir müssen die innere und äußere sicherheit unseres landes weiter stärken und")
+        // Setup Window=5 Target Words
         const targets = [
-            { label: 'müssen (t-5)', y: 40 },
-            { label: 'die (t-4)', y: 80 },
-            { label: 'innere (t-3)', y: 120 },
-            { label: 'und (t-2)', y: 160 },
-            { label: 'äußere (t-1)', y: 200 },
-            { label: 'unseres (t+1)', y: 240 },
-            { label: 'landes (t+2)', y: 280 },
-            { label: 'weiter (t+3)', y: 320 },
-            { label: 'stärken (t+4)', y: 360 },
-            { label: 'und (t+5)', y: 400 }
+            { label: 'müssen', y: 40, isTarget: true },
+            { label: 'die', y: 80, isTarget: true },
+            { label: 'innere', y: 120, isTarget: true },
+            { label: 'und', y: 160, isTarget: true },
+            { label: 'äußere', y: 200, isTarget: true },
+            { label: 'unseres', y: 240, isTarget: true },
+            { label: 'landes', y: 280, isTarget: true },
+            { label: 'weiter', y: 320, isTarget: true },
+            { label: 'stärken', y: 360, isTarget: true },
+            { label: 'und', y: 400, isTarget: true }
         ];
 
         // Draw Input
-        createNode('in', 'input', 150, 220, 'sicherheit (t=0)', 30);
+        createNode('in', 'input', 120, 220, 'sicherheit', 30);
 
         // Draw Hidden Layer
         for(let i=0; i<5; i++) {
             let yPos = 80 + (i * 70);
             let label = (i === 2) ? '...' : `Dim ${i+1}`;
             if(i===4) label = 'Dim 100';
-            createNode(`h${i}`, 'hidden', 450, yPos, label, 15);
+            createNode(`h${i}`, 'hidden', 380, yPos, label, 15, false, true); // true = show dot product
         }
 
-        // Draw 10 Output Nodes
+        // Draw Output Nodes
         targets.forEach((t, i) => {
-            createNode(`out${i}`, 'target', 750, t.y, t.label, 12, true);
+            const type = t.isTarget ? 'target' : 'noise';
+            createNode(`out${i}`, type, 650, t.y, t.label, 12, true, true, t.isTarget);
         });
 
         // Draw Connections
         const hiddenNodes = document.querySelectorAll('.node-hidden');
-        const outNodes = document.querySelectorAll('.node-target');
-        const inNode = document.getElementById('node-in');
+        const outNodes = document.querySelectorAll('.node-target, .node-noise');
 
         hiddenNodes.forEach(hn => {
             // Input to Hidden
-            createLink(150, 220, 450, hn.getAttribute('cy'), 'link-in');
+            createLink(120, 220, 380, hn.getAttribute('cy'), 'link-in');
+            
             // Hidden to Output
             outNodes.forEach(on => {
-                createLink(450, hn.getAttribute('cy'), 750, on.getAttribute('cy'), 'link-out');
+                const isTarget = on.classList.contains('node-target');
+                createLink(380, hn.getAttribute('cy'), 650, on.getAttribute('cy'), isTarget ? 'link-target-out' : 'link-noise');
             });
         });
 
-        function createNode(id, type, x, y, labelText, r, textRight=false) {
+        function createNode(id, type, x, y, labelText, r, textRight=false, showMath=false, isSupervisedTarget=false) {
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             g.setAttribute('class', `node node-${type}`);
             g.setAttribute('id', `node-${id}`);
@@ -259,6 +296,8 @@
             circle.setAttribute('cx', x); circle.setAttribute('cy', y); circle.setAttribute('r', r);
             
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.textContent = labelText;
+            
             if(textRight) {
                 text.setAttribute('x', x + 25); text.setAttribute('y', y);
                 text.setAttribute('text-anchor', 'start');
@@ -269,9 +308,33 @@
                 text.setAttribute('x', x); text.setAttribute('y', y + 45);
                 text.setAttribute('text-anchor', 'middle');
             }
-            text.textContent = labelText;
 
             g.appendChild(circle); g.appendChild(text);
+
+            // Append Mathematical Operations
+            if (showMath) {
+                const mathText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                mathText.setAttribute('class', 'math-element hidden-view math-label');
+                if (type === 'hidden') {
+                    mathText.textContent = 'h = Σ(w·x)';
+                    mathText.setAttribute('x', x); mathText.setAttribute('y', y + 25);
+                    mathText.setAttribute('text-anchor', 'middle');
+                } else if (type === 'target') {
+                    mathText.textContent = 'ŷ = σ(Σ(w·h))';
+                    mathText.setAttribute('x', x - 95); mathText.setAttribute('y', y);
+                }
+                g.appendChild(mathText);
+            }
+
+            // Append Supervised Labels
+            if (type === 'target' || type === 'noise') {
+                const labelTextObj = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                labelTextObj.setAttribute('class', `math-element hidden-view ${isSupervisedTarget ? 'super-label' : 'noise-label'}`);
+                labelTextObj.textContent = isSupervisedTarget ? '[y=1]' : '[y=0]';
+                labelTextObj.setAttribute('x', x + 95); labelTextObj.setAttribute('y', y);
+                g.appendChild(labelTextObj);
+            }
+
             nodesGroup.appendChild(g);
         }
 
@@ -294,20 +357,31 @@
             cosineView.classList.add('hidden-view');
             extractionBox.classList.add('hidden-view');
             extractionText.classList.add('hidden-view');
+            mathGroup.classList.add('hidden-view');
             
-            document.querySelectorAll('.node-input, .node-target, .link-in, .link-out, .label').forEach(el => {
+            document.querySelectorAll('.node-input, .node-target, .link-in, .link-target-out, .link-noise, .label').forEach(el => {
                 el.classList.remove('fade-out');
             });
+            document.querySelectorAll('.math-element').forEach(el => el.classList.add('hidden-view'));
 
             if (step === 1) {
                 networkView.classList.add('step-1');
-                document.querySelectorAll('.link-in, .link-out').forEach(l => l.classList.add('link-flow'));
-                infoText.innerHTML = `<strong>1. Training Phase:</strong> The neural network reads the center word ("sicherheit"). Because <code>window=5</code>, it attempts to predict the 5 specific words before it and the 5 specific words after it simultaneously. It adjusts the hidden layer weights until it succeeds.`;
+                mathGroup.classList.remove('hidden-view');
+                document.querySelectorAll('.math-element').forEach(el => el.classList.remove('hidden-view'));
+                
+                document.querySelectorAll('.link-in').forEach(l => l.classList.add('link-flow-hidden'));
+                document.querySelectorAll('.link-target-out').forEach(l => l.classList.add('link-flow-active'));
+                
+                infoText.innerHTML = `<strong>1. Training Phase:</strong> The network calculates the scalar product of inputs and weights <code>Σ(w·x)</code>. It compares its output prediction (<code>ŷ</code>) against the true labels from the text (<code>y=1</code> for context words). The Loss Function calculates the error and updates the weights via backpropagation.`;
             } 
             
             else if (step === 2) {
-                document.querySelectorAll('.link-in, .link-out').forEach(l => l.classList.remove('link-flow'));
-                document.querySelectorAll('.node-input, .node-target, .link-in, .link-out').forEach(el => el.classList.add('fade-out'));
+                document.querySelectorAll('.link-in, .link-target-out').forEach(l => {
+                    l.classList.remove('link-flow-active');
+                    l.classList.remove('link-flow-hidden');
+                });
+                document.querySelectorAll('.node-input, .node-target, .node-noise, .link-in, .link-target-out, .link-noise').forEach(el => el.classList.add('fade-out'));
+                
                 extractionBox.classList.remove('hidden-view');
                 extractionText.classList.remove('hidden-view');
                 infoText.innerHTML = `<strong>2. Extraction:</strong> Once training is finished, we discard the output layer. The 100 learned weights in the hidden layer become the permanent mathematical coordinate (the <strong>Word Vector</strong>) for the word "sicherheit".`;
