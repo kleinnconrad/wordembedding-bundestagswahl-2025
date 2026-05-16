@@ -51,28 +51,38 @@ Our model utilizes the Continuous Skip-Gram architecture. Rather than guessing a
 
 ```mermaid
 graph LR
-    classDef input fill:transparent,stroke-width:2px;
-    classDef hidden fill:transparent,stroke-width:2px,stroke-dasharray: 5 5;
-    classDef output fill:transparent,stroke-width:2px;
+    classDef inputNode fill:transparent,stroke-width:2px;
+    classDef hiddenNode fill:transparent,stroke-width:2px,stroke-dasharray: 4 4;
+    classDef outputNode fill:transparent,stroke-width:2px;
+    classDef textNode fill:none,stroke:none;
 
-    %% Input Layer
-    I((sicherheit <br> Center Word)):::input
+    I((Center Word<br>sicherheit)):::inputNode
 
-    %% Hidden Layer (The actual Word Vector)
-    subgraph Word_Vector [Word Vector]
-        H[Hidden Layer <br> 100 Dimensions]:::hidden
+    subgraph Hidden_Layer [Hidden Layer: The 100-Dimensional Vector]
+        H1((Dim 1)):::hiddenNode
+        H2((Dim 2)):::hiddenNode
+        H3((...)):::textNode
+        H100((Dim 100)):::hiddenNode
     end
-
-    %% Output Layer (Context Window)
-    subgraph Context_Predictions [Context Predictions]
-        O1((innere <br> Context -1)):::output
-        O2((stärken <br> Context +1)):::output
+    
+    subgraph Output_Layer [Output Layer: Predicting Context Window = 5]
+        O_m5((Context -5)):::outputNode
+        O_m_dots((...)):::textNode
+        O_m1((Context -1<br>innere)):::outputNode
+        O_p1((Context +1<br>stärken)):::outputNode
+        O_p_dots((...)):::textNode
+        O_p5((Context +5)):::outputNode
     end
-
-    %% Connections
-    I -->|Input Weights| H
-    H -->|Output Weights| O1
-    H -->|Output Weights| O2
+    
+    %% Input to Hidden
+    I ===>|Input Weights| H1
+    I ===>|Input Weights| H2
+    I ===>|Input Weights| H100
+    
+    %% Hidden to Output (Dense connections)
+    H1 --> O_m5 & O_m1 & O_p1 & O_p5
+    H2 --> O_m5 & O_m1 & O_p1 & O_p5
+    H100 --> O_m5 & O_m1 & O_p1 & O_p5
 ```
 
 ### Optimization Techniques
