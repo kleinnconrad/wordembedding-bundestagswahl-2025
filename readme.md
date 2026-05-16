@@ -46,7 +46,7 @@ While the user may specify the architecture, the implementation nuances are crit
 * **Skip-gram ($sg=1$):** Instead of predicting one center word, the model uses the center word to predict the surrounding context. 
 * **Project Decision:** For the BW programs, **Skip-gram** is preferred. Skip-gram works better with small amounts of training data and represents rare political terms (e.g., "Zwangsfinanzierung" or "Netzstabilität") more accurately than CBOW.
 
-#### Visualizing the Skip-Gram Architecture
+### Visualizing the Skip-Gram Architecture
 Our model utilizes the Continuous Skip-Gram architecture. Rather than guessing a missing word, the network takes a target word and attempts to predict the semantic context surrounding it.
 
 [![Architecture Simulation](https://img.shields.io/badge/Launch-Interactive_Simulation-2ea44f?style=for-the-badge&logo=html5)](https://kleinnconrad.github.io/wordembedding-bundestagswahl-2025/simulation.html)
