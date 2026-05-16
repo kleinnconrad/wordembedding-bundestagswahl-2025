@@ -56,23 +56,24 @@ graph LR
     classDef output fill:transparent,stroke-width:2px;
 
     %% Input Layer
-    I(( "sicherheit" <br> Center Word )):::input
+    I((sicherheit <br> Center Word)):::input
 
     %% Hidden Layer (The actual Word Vector)
-    subgraph Word Vector
-    H[ Hidden Layer <br> 100 Dimensions ]:::hidden
+    subgraph Word_Vector [Word Vector]
+        H[Hidden Layer <br> 100 Dimensions]:::hidden
     end
 
     %% Output Layer (Context Window)
-    subgraph Context Predictions
-    O1(( "innere" <br> Context -1 )):::output
-    O2(( "stärken" <br> Context +1 )):::output
+    subgraph Context_Predictions [Context Predictions]
+        O1((innere <br> Context -1)):::output
+        O2((stärken <br> Context +1)):::output
     end
 
     %% Connections
-    I -->| Input Weights | H
-    H -->| Output Weights | O1
-    H -->| Output Weights | O2
+    I -->|Input Weights| H
+    H -->|Output Weights| O1
+    H -->|Output Weights| O2
+```
 
 ### Optimization Techniques
 To handle the computational cost of the Softmax function over a large vocabulary, Gensim utilizes **Negative Sampling (NEG)**. Instead of updating all weights for every sample, the model only updates the weights for the target word and a small number of "negative" (noise) words, significantly improving training efficiency on local machines.
