@@ -51,38 +51,55 @@ Our model utilizes the Continuous Skip-Gram architecture. Rather than guessing a
 
 ```mermaid
 graph LR
-    classDef inputNode fill:transparent,stroke-width:2px;
-    classDef hiddenNode fill:transparent,stroke-width:2px,stroke-dasharray: 4 4;
-    classDef outputNode fill:transparent,stroke-width:2px;
+    %% Custom styling to simulate the "Active" forward pass
+    classDef inputActive fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px;
+    classDef hiddenActive fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,stroke-dasharray: 5 5;
+    classDef outputActive fill:#fff8e1,stroke:#f57f17,stroke-width:4px;
+    classDef inactive fill:transparent,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 2 2;
     classDef textNode fill:none,stroke:none;
 
-    I((Center Word<br>sicherheit)):::inputNode
+    %% Input Node
+    I((Input Word<br>sicherheit)):::inputActive
 
-    subgraph Hidden_Layer [Hidden Layer: The 100-Dimensional Vector]
-        H1((Dim 1)):::hiddenNode
-        H2((Dim 2)):::hiddenNode
+    %% Hidden Layer
+    subgraph Hidden_Layer [Hidden Layer: 100 Dimensions]
+        H1((Dim 1)):::hiddenActive
+        H2((Dim 2)):::hiddenActive
         H3((...)):::textNode
-        H100((Dim 100)):::hiddenNode
+        H100((Dim 100)):::hiddenActive
     end
-    
-    subgraph Output_Layer [Output Layer: Predicting Context Window = 5]
-        O_m5((Context -5)):::outputNode
+
+    %% Output Layer
+    subgraph Output_Layer [Output Layer: Context Predictions]
+        O_m5((Context -5)):::inactive
         O_m_dots((...)):::textNode
-        O_m1((Context -1<br>innere)):::outputNode
-        O_p1((Context +1<br>stärken)):::outputNode
+        
+        %% Actively Predicted Words
+        O_m1((Context -1<br>innere)):::outputActive
+        O_p1((Context +1<br>stärken)):::outputActive
+        
         O_p_dots((...)):::textNode
-        O_p5((Context +5)):::outputNode
+        O_p5((Context +5)):::inactive
     end
-    
-    %% Input to Hidden
-    I ===>|Input Weights| H1
-    I ===>|Input Weights| H2
-    I ===>|Input Weights| H100
-    
-    %% Hidden to Output (Dense connections)
-    H1 --> O_m5 & O_m1 & O_p1 & O_p5
-    H2 --> O_m5 & O_m1 & O_p1 & O_p5
-    H100 --> O_m5 & O_m1 & O_p1 & O_p5
+
+    %% Forward Pass Activation (Input to Hidden)
+    I ===>|Forward Pass| H1
+    I ===>|Forward Pass| H2
+    I ===>|Forward Pass| H100
+
+    %% Strong Signals (Hidden to Target Words)
+    H1 ===>|Strong Signal| O_m1
+    H1 ===>|Strong Signal| O_p1
+    H2 ===>|Strong Signal| O_m1
+    H2 ===>|Strong Signal| O_p1
+    H100 ===>|Strong Signal| O_m1
+    H100 ===>|Strong Signal| O_p1
+
+    %% Weak Signals (Hidden to Noise Words)
+    H1 -.->|Weak Signal| O_m5
+    H1 -.->|Weak Signal| O_p5
+    H100 -.->|Weak Signal| O_m5
+    H100 -.->|Weak Signal| O_p5
 ```
 
 ### Optimization Techniques
