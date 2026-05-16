@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word2Vec: Skip-Gram Forward Pass</title>
+    <title>Word2Vec: Full Lifecycle Visualizer</title>
     <style>
         :root {
-            --bg-color: #0f111a;
+            --bg-color: #0d1117;
             --panel-bg: #161b22;
             --text-main: #c9d1d9;
             --text-muted: #8b949e;
             --node-input: #58a6ff;
-            --node-hidden: #8a63d2;
+            --node-hidden: #bc8cff;
             --node-target: #3fb950;
-            --node-noise: #30363d;
-            --line-idle: #21262d;
+            --vector-1: #bc8cff;
+            --vector-2: #ff7b72;
+            --line-idle: #30363d;
         }
 
         body {
@@ -34,8 +35,8 @@
             border: 1px solid #30363d;
             border-radius: 12px;
             padding: 2rem;
-            width: 900px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            width: 950px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
         }
 
         .header {
@@ -44,272 +45,283 @@
             align-items: center;
             border-bottom: 1px solid #30363d;
             padding-bottom: 1rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
-        .header h1 {
-            margin: 0;
-            font-size: 1.5rem;
-            color: #fff;
-        }
-
-        .stats {
-            display: flex;
-            gap: 2rem;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-        }
-
-        .stats span {
-            display: block;
-            color: #fff;
-            font-weight: bold;
-            font-size: 1rem;
-            margin-top: 4px;
-        }
-
-        svg {
-            width: 100%;
-            height: 400px;
-            overflow: visible;
-        }
-
-        .node circle {
-            fill: var(--panel-bg);
-            stroke-width: 3px;
-            transition: all 0.3s ease;
-        }
-
-        .node text {
-            fill: var(--text-main);
-            font-size: 14px;
-            font-weight: 500;
-            text-anchor: middle;
-            dominant-baseline: middle;
-            pointer-events: none;
-        }
-
-        /* Specific Node Colors */
-        .node-input circle { stroke: var(--node-input); }
-        .node-hidden circle { stroke: var(--node-hidden); }
-        .node-target circle { stroke: var(--node-target); }
-        .node-noise circle { stroke: var(--node-noise); }
-
-        .node-input text { fill: var(--node-input); }
-        .node-target text { fill: var(--node-target); }
-        
-        .label {
-            fill: var(--text-muted);
-            font-size: 12px;
-            text-anchor: middle;
-            letter-spacing: 1px;
-        }
-
-        .link {
-            stroke: var(--line-idle);
-            stroke-width: 2px;
-            fill: none;
-            transition: stroke 0.3s ease;
-        }
-
-        /* Animation Classes */
-        .animating .link-active {
-            stroke: var(--node-input);
-            stroke-width: 3px;
-            stroke-dasharray: 10;
-            animation: flow 0.5s linear infinite;
-        }
-
-        .animating .link-target {
-            stroke: var(--node-target);
-            stroke-width: 4px;
-            stroke-dasharray: 10;
-            animation: flow 0.5s linear infinite;
-        }
-
-        .animating .node-input circle { fill: rgba(88, 166, 255, 0.2); box-shadow: 0 0 10px var(--node-input); }
-        .animating .node-hidden.active circle { fill: rgba(138, 99, 210, 0.2); }
-        .animating .node-target.active circle { fill: rgba(63, 185, 80, 0.2); }
-
-        @keyframes flow {
-            from { stroke-dashoffset: 20; }
-            to { stroke-dashoffset: 0; }
-        }
+        .header h1 { margin: 0; font-size: 1.5rem; color: #fff; }
 
         .controls {
-            margin-top: 2rem;
             display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
             justify-content: center;
         }
 
         button {
-            background-color: #238636;
-            color: white;
-            border: none;
-            padding: 12px 24px;
+            background-color: #21262d;
+            color: var(--text-main);
+            border: 1px solid #30363d;
+            padding: 10px 20px;
             font-size: 1rem;
-            font-weight: bold;
+            font-weight: 600;
             border-radius: 6px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
         }
 
-        button:hover { background-color: #2ea043; }
-        button:disabled { background-color: #21262d; color: #8b949e; cursor: not-allowed; }
+        button.active {
+            background-color: #1f6feb;
+            border-color: #1f6feb;
+            color: white;
+        }
 
+        button:hover:not(.active) { background-color: #30363d; }
+
+        .info-box {
+            background: #0d1117;
+            border-left: 4px solid var(--node-hidden);
+            padding: 1rem 1.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            min-height: 60px;
+            font-size: 1.05rem;
+            line-height: 1.5;
+        }
+
+        svg {
+            width: 100%;
+            height: 480px;
+            background: #0d1117;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+
+        /* SVG Element Styles */
+        .node circle { fill: var(--panel-bg); stroke-width: 3px; transition: all 0.5s ease; }
+        .node text { fill: var(--text-main); font-size: 13px; font-weight: 500; dominant-baseline: middle; }
+        
+        .node-input circle { stroke: var(--node-input); }
+        .node-hidden circle { stroke: var(--node-hidden); }
+        .node-target circle { stroke: var(--node-target); }
+        
+        .link { stroke: var(--line-idle); stroke-width: 1.5px; fill: none; transition: opacity 0.5s; }
+        .label { fill: var(--text-muted); font-size: 12px; text-anchor: middle; letter-spacing: 1px; font-weight: bold; }
+
+        /* Step 1 Animation */
+        .step-1 .link-flow {
+            stroke: var(--node-target);
+            stroke-width: 2.5px;
+            stroke-dasharray: 8;
+            animation: flowAnim 0.8s linear infinite;
+        }
+        .step-1 .node-input circle { fill: rgba(88, 166, 255, 0.2); }
+        .step-1 .node-hidden circle { fill: rgba(188, 140, 255, 0.2); }
+        .step-1 .node-target circle { fill: rgba(63, 185, 80, 0.2); }
+
+        @keyframes flowAnim {
+            from { stroke-dashoffset: 16; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Step 2 Animation */
+        .fade-out { opacity: 0.1 !important; }
+        .box-highlight { fill: rgba(188, 140, 255, 0.1); stroke: var(--node-hidden); stroke-width: 2px; stroke-dasharray: 6; }
+        .vector-text { fill: var(--node-hidden); font-family: monospace; font-size: 16px; font-weight: bold; text-anchor: middle; }
+
+        /* Step 3 Animation */
+        .axis { stroke: #30363d; stroke-width: 2px; }
+        .vector-line { stroke-width: 4px; stroke-linecap: round; }
+        .vec1 { stroke: var(--vector-1); }
+        .vec2 { stroke: var(--vector-2); }
+        .arc { fill: rgba(255, 255, 255, 0.1); stroke: #8b949e; stroke-width: 2px; stroke-dasharray: 4; }
+        .math-text { fill: #fff; font-size: 15px; font-family: monospace; }
+        
+        /* View Toggling */
+        .hidden-view { display: none; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="header">
-            <h1>Word2Vec: Skip-Gram</h1>
-            <div class="stats">
-                <div>Architecture<span>Skip-Gram</span></div>
-                <div>Target<span>sicherheit</span></div>
-                <div>Dimensions<span>100</span></div>
-                <div id="statusLabel">Status<span style="color: var(--node-input)">Idle</span></div>
-            </div>
+            <h1>Word Embedding Architecture</h1>
         </div>
-
-        <svg id="networkView">
-            <text x="150" y="380" class="label">INPUT LAYER</text>
-            <text x="450" y="380" class="label">PROJECTION LAYER</text>
-            <text x="750" y="380" class="label">OUTPUT LAYER (CONTEXT)</text>
-
-            <g id="linksGroup"></g>
-            <g id="nodesGroup"></g>
-        </svg>
 
         <div class="controls">
-            <button id="simBtn">Simulate Forward Pass</button>
+            <button id="btn1" class="active" onclick="setStep(1)">1. Predict Context (Window=5)</button>
+            <button id="btn2" onclick="setStep(2)">2. Extract Word Vector</button>
+            <button id="btn3" onclick="setStep(3)">3. Cosine Distance</button>
         </div>
+
+        <div class="info-box" id="infoText">
+            <strong>Training Phase:</strong> The neural network reads the center word ("sicherheit"). Because <code>window=5</code>, it attempts to predict the 5 specific words before it and the 5 specific words after it simultaneously.
+        </div>
+
+        <svg id="svgCanvas">
+            <g id="networkView">
+                <text x="150" y="450" class="label">INPUT</text>
+                <text x="450" y="450" class="label">HIDDEN LAYER (100D)</text>
+                <text x="750" y="450" class="label">OUTPUT (CONTEXT = 5)</text>
+
+                <rect id="extractionBox" x="380" y="30" width="140" height="380" rx="10" class="box-highlight hidden-view"></rect>
+                <text id="extractionText" x="450" y="430" class="vector-text hidden-view">Word Vector [0.12, -0.4, ...]</text>
+
+                <g id="linksGroup"></g>
+                <g id="nodesGroup"></g>
+            </g>
+
+            <g id="cosineView" class="hidden-view">
+                <line x1="150" y1="400" x2="800" y2="400" class="axis" />
+                <line x1="150" y1="400" x2="150" y2="50" class="axis" />
+                
+                <path d="M 350 400 A 200 200 0 0 0 325 240" class="arc" fill="none"/>
+                <text x="400" y="340" fill="#8b949e" font-size="16px">θ (Angle)</text>
+
+                <line x1="150" y1="400" x2="650" y2="200" class="vector-line vec1" />
+                <circle cx="650" cy="200" r="6" fill="var(--vector-1)" />
+                <text x="665" y="195" fill="var(--vector-1)" font-size="16px" font-weight="bold">"sicherheit"</text>
+
+                <line x1="150" y1="400" x2="550" y2="150" class="vector-line vec2" />
+                <circle cx="550" cy="150" r="6" fill="var(--vector-2)" />
+                <text x="565" y="145" fill="var(--vector-2)" font-size="16px" font-weight="bold">"kriminalität"</text>
+
+                <line x1="150" y1="400" x2="250" y2="100" class="vector-line" stroke="#8b949e" />
+                <circle cx="250" cy="100" r="6" fill="#8b949e" />
+                <text x="265" y="95" fill="#8b949e" font-size="16px">"steuern"</text>
+
+                <rect x="550" y="300" width="300" height="90" fill="#161b22" stroke="#30363d" rx="8" />
+                <text x="570" y="330" class="math-text">Cosine Similarity = cos(θ)</text>
+                <text x="570" y="355" class="math-text">Small θ  => High Similarity</text>
+                <text x="570" y="380" class="math-text">Cosine Distance = 1 - cos(θ)</text>
+            </g>
+        </svg>
     </div>
 
     <script>
-        const svg = document.getElementById('networkView');
         const linksGroup = document.getElementById('linksGroup');
         const nodesGroup = document.getElementById('nodesGroup');
-        const simBtn = document.getElementById('simBtn');
-        const statusLabel = document.querySelector('#statusLabel span');
+        const networkView = document.getElementById('networkView');
+        const cosineView = document.getElementById('cosineView');
+        const extractionBox = document.getElementById('extractionBox');
+        const extractionText = document.getElementById('extractionText');
+        const infoText = document.getElementById('infoText');
 
-        // Node Configurations
-        const nodes = [
-            // Input
-            { id: 'in', type: 'input', x: 150, y: 200, label: 'sicherheit', r: 40 },
-            
-            // Hidden (Projection)
-            { id: 'h1', type: 'hidden', x: 450, y: 100, label: '', r: 15 },
-            { id: 'h2', type: 'hidden', x: 450, y: 200, label: 'HIDDEN: 100D', r: 15 },
-            { id: 'h3', type: 'hidden', x: 450, y: 300, label: '', r: 15 },
-            
-            // Outputs (Context Window)
-            { id: 'o1', type: 'noise', x: 750, y: 50, label: '... (t-5)', r: 15 },
-            { id: 'o2', type: 'noise', x: 750, y: 110, label: '... (t-4)', r: 15 },
-            { id: 'o3', type: 'noise', x: 750, y: 170, label: '... (t-2)', r: 15 },
-            { id: 't1', type: 'target', x: 750, y: 230, label: 'innere (t-1)', r: 20 },
-            { id: 't2', type: 'target', x: 750, y: 290, label: 'stärken (t+1)', r: 20 },
-            { id: 'o4', type: 'noise', x: 750, y: 350, label: '... (t+2)', r: 15 }
+        // Setup Window=5 Target Words (Sentence: "wir müssen die innere und äußere sicherheit unseres landes weiter stärken und")
+        const targets = [
+            { label: 'müssen (t-5)', y: 40 },
+            { label: 'die (t-4)', y: 80 },
+            { label: 'innere (t-3)', y: 120 },
+            { label: 'und (t-2)', y: 160 },
+            { label: 'äußere (t-1)', y: 200 },
+            { label: 'unseres (t+1)', y: 240 },
+            { label: 'landes (t+2)', y: 280 },
+            { label: 'weiter (t+3)', y: 320 },
+            { label: 'stärken (t+4)', y: 360 },
+            { label: 'und (t+5)', y: 400 }
         ];
 
-        // Draw Links
-        const hiddenNodes = nodes.filter(n => n.type === 'hidden');
-        const outputNodes = nodes.filter(n => n.type === 'noise' || n.type === 'target');
-        
-        // Input -> Hidden
-        hiddenNodes.forEach(hn => {
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', 150); line.setAttribute('y1', 200);
-            line.setAttribute('x2', hn.x); line.setAttribute('y2', hn.y);
-            line.setAttribute('class', 'link link-in');
-            linksGroup.appendChild(line);
+        // Draw Input
+        createNode('in', 'input', 150, 220, 'sicherheit (t=0)', 30);
+
+        // Draw Hidden Layer
+        for(let i=0; i<5; i++) {
+            let yPos = 80 + (i * 70);
+            let label = (i === 2) ? '...' : `Dim ${i+1}`;
+            if(i===4) label = 'Dim 100';
+            createNode(`h${i}`, 'hidden', 450, yPos, label, 15);
+        }
+
+        // Draw 10 Output Nodes
+        targets.forEach((t, i) => {
+            createNode(`out${i}`, 'target', 750, t.y, t.label, 12, true);
         });
 
-        // Hidden -> Output
+        // Draw Connections
+        const hiddenNodes = document.querySelectorAll('.node-hidden');
+        const outNodes = document.querySelectorAll('.node-target');
+        const inNode = document.getElementById('node-in');
+
         hiddenNodes.forEach(hn => {
-            outputNodes.forEach(on => {
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', hn.x); line.setAttribute('y1', hn.y);
-                line.setAttribute('x2', on.x); line.setAttribute('y2', on.y);
-                // Tag links that go to the correct target words
-                const isTarget = on.type === 'target' ? 'link-target-path' : '';
-                line.setAttribute('class', `link link-out ${isTarget}`);
-                linksGroup.appendChild(line);
+            // Input to Hidden
+            createLink(150, 220, 450, hn.getAttribute('cy'), 'link-in');
+            // Hidden to Output
+            outNodes.forEach(on => {
+                createLink(450, hn.getAttribute('cy'), 750, on.getAttribute('cy'), 'link-out');
             });
         });
 
-        // Draw Nodes
-        nodes.forEach(n => {
+        function createNode(id, type, x, y, labelText, r, textRight=false) {
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', `node node-${n.type}`);
-            g.setAttribute('id', `node-${n.id}`);
+            g.setAttribute('class', `node node-${type}`);
+            g.setAttribute('id', `node-${id}`);
             
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', n.x);
-            circle.setAttribute('cy', n.y);
-            circle.setAttribute('r', n.r);
+            circle.setAttribute('cx', x); circle.setAttribute('cy', y); circle.setAttribute('r', r);
             
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            // Offset text based on node type
-            if(n.type === 'hidden') {
-                text.setAttribute('x', n.x); text.setAttribute('y', n.y - 30);
-            } else if (n.type === 'noise' || n.type === 'target') {
-                text.setAttribute('x', n.x + 40); text.setAttribute('y', n.y);
+            if(textRight) {
+                text.setAttribute('x', x + 25); text.setAttribute('y', y);
                 text.setAttribute('text-anchor', 'start');
+            } else if (type === 'hidden') {
+                text.setAttribute('x', x); text.setAttribute('y', y - 25);
+                text.setAttribute('text-anchor', 'middle');
             } else {
-                text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+                text.setAttribute('x', x); text.setAttribute('y', y + 45);
+                text.setAttribute('text-anchor', 'middle');
             }
-            text.textContent = n.label;
+            text.textContent = labelText;
 
-            g.appendChild(circle);
-            g.appendChild(text);
+            g.appendChild(circle); g.appendChild(text);
             nodesGroup.appendChild(g);
-        });
+        }
 
-        // Animation Logic
-        simBtn.addEventListener('click', () => {
-            if (svg.classList.contains('animating')) return;
-            
-            simBtn.disabled = true;
-            statusLabel.textContent = "Processing...";
-            statusLabel.style.color = "var(--node-target)";
-            
-            svg.classList.add('animating');
+        function createLink(x1, y1, x2, y2, cls) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+            line.setAttribute('class', `link ${cls}`);
+            linksGroup.appendChild(line);
+        }
 
-            // 1. Activate Input to Hidden paths
-            document.querySelectorAll('.link-in').forEach(l => l.classList.add('link-active'));
-            
-            setTimeout(() => {
-                // 2. Activate Hidden Nodes
-                document.querySelectorAll('.node-hidden').forEach(n => n.classList.add('active'));
-                
-                setTimeout(() => {
-                    // 3. Activate Hidden to Target Output paths
-                    document.querySelectorAll('.link-target-path').forEach(l => l.classList.add('link-target'));
-                    
-                    setTimeout(() => {
-                        // 4. Activate Target Nodes
-                        document.querySelectorAll('.node-target').forEach(n => n.classList.add('active'));
-                        
-                        // Reset after 3 seconds
-                        setTimeout(() => {
-                            svg.classList.remove('animating');
-                            document.querySelectorAll('.link-active, .link-target').forEach(l => {
-                                l.classList.remove('link-active');
-                                l.classList.remove('link-target');
-                            });
-                            document.querySelectorAll('.active').forEach(n => n.classList.remove('active'));
-                            simBtn.disabled = false;
-                            statusLabel.textContent = "Idle";
-                            statusLabel.style.color = "var(--node-input)";
-                        }, 3000);
+        // Logic for Switching Steps
+        function setStep(step) {
+            // Reset Buttons
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn${step}`).classList.add('active');
 
-                    }, 400); // Target node delay
-                }, 400); // Outbound paths delay
-            }, 400); // Hidden node delay
-        });
+            // Reset SVG Canvas State
+            networkView.classList.remove('hidden-view', 'step-1');
+            cosineView.classList.add('hidden-view');
+            extractionBox.classList.add('hidden-view');
+            extractionText.classList.add('hidden-view');
+            
+            document.querySelectorAll('.node-input, .node-target, .link-in, .link-out, .label').forEach(el => {
+                el.classList.remove('fade-out');
+            });
+
+            if (step === 1) {
+                networkView.classList.add('step-1');
+                document.querySelectorAll('.link-in, .link-out').forEach(l => l.classList.add('link-flow'));
+                infoText.innerHTML = `<strong>1. Training Phase:</strong> The neural network reads the center word ("sicherheit"). Because <code>window=5</code>, it attempts to predict the 5 specific words before it and the 5 specific words after it simultaneously. It adjusts the hidden layer weights until it succeeds.`;
+            } 
+            
+            else if (step === 2) {
+                document.querySelectorAll('.link-in, .link-out').forEach(l => l.classList.remove('link-flow'));
+                document.querySelectorAll('.node-input, .node-target, .link-in, .link-out').forEach(el => el.classList.add('fade-out'));
+                extractionBox.classList.remove('hidden-view');
+                extractionText.classList.remove('hidden-view');
+                infoText.innerHTML = `<strong>2. Extraction:</strong> Once training is finished, we discard the output layer. The 100 learned weights in the hidden layer become the permanent mathematical coordinate (the <strong>Word Vector</strong>) for the word "sicherheit".`;
+            } 
+            
+            else if (step === 3) {
+                networkView.classList.add('hidden-view');
+                cosineView.classList.remove('hidden-view');
+                infoText.innerHTML = `<strong>3. Inference (Cosine Distance):</strong> We compare the extracted vectors. Words that shared similar context windows during training (like "sicherheit" and "kriminalität") will point in the same direction, resulting in a small angle (θ) and a low Cosine Distance.`;
+            }
+        }
+
+        // Initialize Step 1
+        setStep(1);
 
     </script>
 </body>
