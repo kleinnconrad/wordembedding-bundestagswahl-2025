@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word2Vec Skip-Gram Visualizer</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            text-align: center; 
+            padding: 2rem; 
+            background-color: #f6f8fa;
+            color: #24292e;
+        }
+        h2 { margin-bottom: 0.5rem; }
+        .description { color: #586069; margin-bottom: 2rem; }
+        .word-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 10px; 
+            margin: 2rem 0; 
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .word { 
+            padding: 12px 18px; 
+            border-radius: 6px; 
+            background: #e1e4e8; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            font-size: 1.2rem; 
+            font-weight: 500;
+        }
+        .word:hover { background: #d1d5da; }
+        .word.center { 
+            background: #2ea44f; /* GitHub Green */
+            color: white; 
+            transform: scale(1.1); 
+            box-shadow: 0 4px 6px rgba(46, 164, 79, 0.4);
+        }
+        .word.context { 
+            background: #0366d6; /* GitHub Blue */
+            color: white; 
+        }
+        .controls { 
+            margin-bottom: 2rem; 
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        input[type=range] { width: 200px; margin-left: 10px; vertical-align: middle; }
+        .info { 
+            font-size: 1.1rem; 
+            background: white;
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            border-left: 5px solid #2ea44f;
+            text-align: left;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h2>Skip-Gram Context Window Visualizer</h2>
+    <p class="description">Click on any word to set it as the Center Word. Adjust the slider to change the context window.</p>
+    
+    <div class="controls">
+        <label for="windowSize">Window Size: <span id="winVal">2</span></label>
+        <input type="range" id="windowSize" min="1" max="4" value="2">
+    </div>
+
+    <div class="word-container" id="words"></div>
+    
+    <div class="info" id="infoText"></div>
+
+    <script>
+        const tokens = ['die', 'partei', 'will', 'innere', 'sicherheit', 'weiter', 'stärken', 'und', 'ausbauen'];
+        let centerIndex = 4; // Default to 'sicherheit'
+        let windowSize = 2;
+
+        const container = document.getElementById('words');
+        const slider = document.getElementById('windowSize');
+        const winVal = document.getElementById('winVal');
+        const infoText = document.getElementById('infoText');
+
+        function render() {
+            container.innerHTML = '';
+            let pairs = 0;
+            
+            tokens.forEach((word, index) => {
+                const el = document.createElement('div');
+                el.className = 'word';
+                el.innerText = word;
+                
+                // Logic for highlighting Center and Context words
+                if (index === centerIndex) {
+                    el.classList.add('center');
+                } else if (Math.abs(index - centerIndex) <= windowSize) {
+                    el.classList.add('context');
+                    pairs++;
+                }
+                
+                // Make words clickable
+                el.onclick = () => { 
+                    centerIndex = index; 
+                    render(); 
+                };
+                container.appendChild(el);
+            });
+            
+            infoText.innerHTML = `
+                <strong>Center Word (Input):</strong> "${tokens[centerIndex]}"<br>
+                <strong>Target Words (Output):</strong> ${pairs}<br><br>
+                <em>The neural network will generate ${pairs} distinct training pairs from this specific view.</em>
+            `;
+        }
+
+        slider.oninput = (e) => {
+            windowSize = parseInt(e.target.value);
+            winVal.innerText = windowSize;
+            render();
+        };
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
