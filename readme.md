@@ -49,7 +49,7 @@ While the user may specify the architecture, the implementation nuances are crit
 #### Visualizing the Skip-Gram Architecture
 Our model utilizes the Continuous Skip-Gram architecture. Rather than guessing a missing word, the network takes a target word and attempts to predict the semantic context surrounding it.
 
-*[Try the Interactive Skip-Gram Visualizer here!](https://github.com/kleinnconrad/wordembedding-bundestagswahl-2025/simulation.html)*
+*[Try the Interactive Skip-Gram Visualizer here!](https://github.com/kleinnconrad/wordembedding-bundestagswahl-2025/blob/main/simulation.html)*
 
 ### Optimization Techniques
 To handle the computational cost of the Softmax function over a large vocabulary, Gensim utilizes **Negative Sampling (NEG)**. Instead of updating all weights for every sample, the model only updates the weights for the target word and a small number of "negative" (noise) words, significantly improving training efficiency on local machines.
