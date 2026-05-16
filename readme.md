@@ -46,6 +46,34 @@ While the user may specify the architecture, the implementation nuances are crit
 * **Skip-gram ($sg=1$):** Instead of predicting one center word, the model uses the center word to predict the surrounding context. 
 * **Project Decision:** For the BW programs, **Skip-gram** is preferred. Skip-gram works better with small amounts of training data and represents rare political terms (e.g., "Zwangsfinanzierung" or "Netzstabilität") more accurately than CBOW.
 
+#### Visualizing the Skip-Gram Architecture
+Our model utilizes the Continuous Skip-Gram architecture. Rather than guessing a missing word, the network takes a target word and attempts to predict the semantic context surrounding it.
+
+```mermaid
+graph LR
+    classDef input fill:transparent,stroke-width:2px;
+    classDef hidden fill:transparent,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef output fill:transparent,stroke-width:2px;
+
+    %% Input Layer
+    I(( "sicherheit" <br> Center Word )):::input
+
+    %% Hidden Layer (The actual Word Vector)
+    subgraph Word Vector
+    H[ Hidden Layer <br> 100 Dimensions ]:::hidden
+    end
+
+    %% Output Layer (Context Window)
+    subgraph Context Predictions
+    O1(( "innere" <br> Context -1 )):::output
+    O2(( "stärken" <br> Context +1 )):::output
+    end
+
+    %% Connections
+    I -->| Input Weights | H
+    H -->| Output Weights | O1
+    H -->| Output Weights | O2
+
 ### Optimization Techniques
 To handle the computational cost of the Softmax function over a large vocabulary, Gensim utilizes **Negative Sampling (NEG)**. Instead of updating all weights for every sample, the model only updates the weights for the target word and a small number of "negative" (noise) words, significantly improving training efficiency on local machines.
 
