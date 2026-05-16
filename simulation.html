@@ -3,129 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word2Vec Skip-Gram Visualizer</title>
+    <title>Word2Vec: Skip-Gram Forward Pass</title>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            text-align: center; 
-            padding: 2rem; 
-            background-color: #f6f8fa;
-            color: #24292e;
+        :root {
+            --bg-color: #0f111a;
+            --panel-bg: #161b22;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --node-input: #58a6ff;
+            --node-hidden: #8a63d2;
+            --node-target: #3fb950;
+            --node-noise: #30363d;
+            --line-idle: #21262d;
         }
-        h2 { margin-bottom: 0.5rem; }
-        .description { color: #586069; margin-bottom: 2rem; }
-        .word-container { 
-            display: flex; 
-            flex-wrap: wrap; 
-            justify-content: center; 
-            gap: 10px; 
-            margin: 2rem 0; 
-            background: white;
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--panel-bg);
+            border: 1px solid #30363d;
+            border-radius: 12px;
             padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            width: 900px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
-        .word { 
-            padding: 12px 18px; 
-            border-radius: 6px; 
-            background: #e1e4e8; 
-            cursor: pointer; 
-            transition: all 0.2s ease; 
-            font-size: 1.2rem; 
-            font-weight: 500;
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
         }
-        .word:hover { background: #d1d5da; }
-        .word.center { 
-            background: #2ea44f; /* GitHub Green */
-            color: white; 
-            transform: scale(1.1); 
-            box-shadow: 0 4px 6px rgba(46, 164, 79, 0.4);
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #fff;
         }
-        .word.context { 
-            background: #0366d6; /* GitHub Blue */
-            color: white; 
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
         }
-        .controls { 
-            margin-bottom: 2rem; 
-            font-size: 1.2rem;
+
+        .stats span {
+            display: block;
+            color: #fff;
             font-weight: bold;
+            font-size: 1rem;
+            margin-top: 4px;
         }
-        input[type=range] { width: 200px; margin-left: 10px; vertical-align: middle; }
-        .info { 
-            font-size: 1.1rem; 
-            background: white;
-            display: inline-block;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            border-left: 5px solid #2ea44f;
-            text-align: left;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+        svg {
+            width: 100%;
+            height: 400px;
+            overflow: visible;
         }
+
+        .node circle {
+            fill: var(--panel-bg);
+            stroke-width: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .node text {
+            fill: var(--text-main);
+            font-size: 14px;
+            font-weight: 500;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
+
+        /* Specific Node Colors */
+        .node-input circle { stroke: var(--node-input); }
+        .node-hidden circle { stroke: var(--node-hidden); }
+        .node-target circle { stroke: var(--node-target); }
+        .node-noise circle { stroke: var(--node-noise); }
+
+        .node-input text { fill: var(--node-input); }
+        .node-target text { fill: var(--node-target); }
+        
+        .label {
+            fill: var(--text-muted);
+            font-size: 12px;
+            text-anchor: middle;
+            letter-spacing: 1px;
+        }
+
+        .link {
+            stroke: var(--line-idle);
+            stroke-width: 2px;
+            fill: none;
+            transition: stroke 0.3s ease;
+        }
+
+        /* Animation Classes */
+        .animating .link-active {
+            stroke: var(--node-input);
+            stroke-width: 3px;
+            stroke-dasharray: 10;
+            animation: flow 0.5s linear infinite;
+        }
+
+        .animating .link-target {
+            stroke: var(--node-target);
+            stroke-width: 4px;
+            stroke-dasharray: 10;
+            animation: flow 0.5s linear infinite;
+        }
+
+        .animating .node-input circle { fill: rgba(88, 166, 255, 0.2); box-shadow: 0 0 10px var(--node-input); }
+        .animating .node-hidden.active circle { fill: rgba(138, 99, 210, 0.2); }
+        .animating .node-target.active circle { fill: rgba(63, 185, 80, 0.2); }
+
+        @keyframes flow {
+            from { stroke-dashoffset: 20; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .controls {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        button {
+            background-color: #238636;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover { background-color: #2ea043; }
+        button:disabled { background-color: #21262d; color: #8b949e; cursor: not-allowed; }
+
     </style>
 </head>
 <body>
-    <h2>Skip-Gram Context Window Visualizer</h2>
-    <p class="description">Click on any word to set it as the Center Word. Adjust the slider to change the context window.</p>
-    
-    <div class="controls">
-        <label for="windowSize">Window Size: <span id="winVal">2</span></label>
-        <input type="range" id="windowSize" min="1" max="4" value="2">
+
+    <div class="container">
+        <div class="header">
+            <h1>Word2Vec: Skip-Gram</h1>
+            <div class="stats">
+                <div>Architecture<span>Skip-Gram</span></div>
+                <div>Target<span>sicherheit</span></div>
+                <div>Dimensions<span>100</span></div>
+                <div id="statusLabel">Status<span style="color: var(--node-input)">Idle</span></div>
+            </div>
+        </div>
+
+        <svg id="networkView">
+            <text x="150" y="380" class="label">INPUT LAYER</text>
+            <text x="450" y="380" class="label">PROJECTION LAYER</text>
+            <text x="750" y="380" class="label">OUTPUT LAYER (CONTEXT)</text>
+
+            <g id="linksGroup"></g>
+            <g id="nodesGroup"></g>
+        </svg>
+
+        <div class="controls">
+            <button id="simBtn">Simulate Forward Pass</button>
+        </div>
     </div>
 
-    <div class="word-container" id="words"></div>
-    
-    <div class="info" id="infoText"></div>
-
     <script>
-        const tokens = ['die', 'partei', 'will', 'innere', 'sicherheit', 'weiter', 'stärken', 'und', 'ausbauen'];
-        let centerIndex = 4; // Default to 'sicherheit'
-        let windowSize = 2;
+        const svg = document.getElementById('networkView');
+        const linksGroup = document.getElementById('linksGroup');
+        const nodesGroup = document.getElementById('nodesGroup');
+        const simBtn = document.getElementById('simBtn');
+        const statusLabel = document.querySelector('#statusLabel span');
 
-        const container = document.getElementById('words');
-        const slider = document.getElementById('windowSize');
-        const winVal = document.getElementById('winVal');
-        const infoText = document.getElementById('infoText');
-
-        function render() {
-            container.innerHTML = '';
-            let pairs = 0;
+        // Node Configurations
+        const nodes = [
+            // Input
+            { id: 'in', type: 'input', x: 150, y: 200, label: 'sicherheit', r: 40 },
             
-            tokens.forEach((word, index) => {
-                const el = document.createElement('div');
-                el.className = 'word';
-                el.innerText = word;
-                
-                // Logic for highlighting Center and Context words
-                if (index === centerIndex) {
-                    el.classList.add('center');
-                } else if (Math.abs(index - centerIndex) <= windowSize) {
-                    el.classList.add('context');
-                    pairs++;
-                }
-                
-                // Make words clickable
-                el.onclick = () => { 
-                    centerIndex = index; 
-                    render(); 
-                };
-                container.appendChild(el);
+            // Hidden (Projection)
+            { id: 'h1', type: 'hidden', x: 450, y: 100, label: '', r: 15 },
+            { id: 'h2', type: 'hidden', x: 450, y: 200, label: 'HIDDEN: 100D', r: 15 },
+            { id: 'h3', type: 'hidden', x: 450, y: 300, label: '', r: 15 },
+            
+            // Outputs (Context Window)
+            { id: 'o1', type: 'noise', x: 750, y: 50, label: '... (t-5)', r: 15 },
+            { id: 'o2', type: 'noise', x: 750, y: 110, label: '... (t-4)', r: 15 },
+            { id: 'o3', type: 'noise', x: 750, y: 170, label: '... (t-2)', r: 15 },
+            { id: 't1', type: 'target', x: 750, y: 230, label: 'innere (t-1)', r: 20 },
+            { id: 't2', type: 'target', x: 750, y: 290, label: 'stärken (t+1)', r: 20 },
+            { id: 'o4', type: 'noise', x: 750, y: 350, label: '... (t+2)', r: 15 }
+        ];
+
+        // Draw Links
+        const hiddenNodes = nodes.filter(n => n.type === 'hidden');
+        const outputNodes = nodes.filter(n => n.type === 'noise' || n.type === 'target');
+        
+        // Input -> Hidden
+        hiddenNodes.forEach(hn => {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', 150); line.setAttribute('y1', 200);
+            line.setAttribute('x2', hn.x); line.setAttribute('y2', hn.y);
+            line.setAttribute('class', 'link link-in');
+            linksGroup.appendChild(line);
+        });
+
+        // Hidden -> Output
+        hiddenNodes.forEach(hn => {
+            outputNodes.forEach(on => {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', hn.x); line.setAttribute('y1', hn.y);
+                line.setAttribute('x2', on.x); line.setAttribute('y2', on.y);
+                // Tag links that go to the correct target words
+                const isTarget = on.type === 'target' ? 'link-target-path' : '';
+                line.setAttribute('class', `link link-out ${isTarget}`);
+                linksGroup.appendChild(line);
             });
+        });
+
+        // Draw Nodes
+        nodes.forEach(n => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', `node node-${n.type}`);
+            g.setAttribute('id', `node-${n.id}`);
             
-            infoText.innerHTML = `
-                <strong>Center Word (Input):</strong> "${tokens[centerIndex]}"<br>
-                <strong>Target Words (Output):</strong> ${pairs}<br><br>
-                <em>The neural network will generate ${pairs} distinct training pairs from this specific view.</em>
-            `;
-        }
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', n.x);
+            circle.setAttribute('cy', n.y);
+            circle.setAttribute('r', n.r);
+            
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            // Offset text based on node type
+            if(n.type === 'hidden') {
+                text.setAttribute('x', n.x); text.setAttribute('y', n.y - 30);
+            } else if (n.type === 'noise' || n.type === 'target') {
+                text.setAttribute('x', n.x + 40); text.setAttribute('y', n.y);
+                text.setAttribute('text-anchor', 'start');
+            } else {
+                text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+            }
+            text.textContent = n.label;
 
-        slider.oninput = (e) => {
-            windowSize = parseInt(e.target.value);
-            winVal.innerText = windowSize;
-            render();
-        };
+            g.appendChild(circle);
+            g.appendChild(text);
+            nodesGroup.appendChild(g);
+        });
 
-        // Initial render
-        render();
+        // Animation Logic
+        simBtn.addEventListener('click', () => {
+            if (svg.classList.contains('animating')) return;
+            
+            simBtn.disabled = true;
+            statusLabel.textContent = "Processing...";
+            statusLabel.style.color = "var(--node-target)";
+            
+            svg.classList.add('animating');
+
+            // 1. Activate Input to Hidden paths
+            document.querySelectorAll('.link-in').forEach(l => l.classList.add('link-active'));
+            
+            setTimeout(() => {
+                // 2. Activate Hidden Nodes
+                document.querySelectorAll('.node-hidden').forEach(n => n.classList.add('active'));
+                
+                setTimeout(() => {
+                    // 3. Activate Hidden to Target Output paths
+                    document.querySelectorAll('.link-target-path').forEach(l => l.classList.add('link-target'));
+                    
+                    setTimeout(() => {
+                        // 4. Activate Target Nodes
+                        document.querySelectorAll('.node-target').forEach(n => n.classList.add('active'));
+                        
+                        // Reset after 3 seconds
+                        setTimeout(() => {
+                            svg.classList.remove('animating');
+                            document.querySelectorAll('.link-active, .link-target').forEach(l => {
+                                l.classList.remove('link-active');
+                                l.classList.remove('link-target');
+                            });
+                            document.querySelectorAll('.active').forEach(n => n.classList.remove('active'));
+                            simBtn.disabled = false;
+                            statusLabel.textContent = "Idle";
+                            statusLabel.style.color = "var(--node-input)";
+                        }, 3000);
+
+                    }, 400); // Target node delay
+                }, 400); // Outbound paths delay
+            }, 400); // Hidden node delay
+        });
+
     </script>
 </body>
 </html>
