@@ -1,8 +1,10 @@
 import os
 import argparse
-import spacy
 import numpy as np
 from gensim.models import Word2Vec
+
+# Import your centralized NLP configuration
+from config import get_configured_nlp
 
 # --- Configuration & Pathing ---
 PARTIES = ["cdu", "gruene", "spd", "afd"]
@@ -13,23 +15,9 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 
-# Load spaCy for German lemmatization
-try:
-    nlp = spacy.load("de_core_news_sm", disable=["parser", "ner"])
-except OSError:
-    print("Error: German spaCy model 'de_core_news_sm' not found.")
-    print("Please run: python -m spacy download de_core_news_sm")
-    exit(1)
-
-# Custom stop words (should match your training script exactly)
-custom_stop_words = {
-    "baden-württemberg", "bw", "land", "landesregierung", 
-    "wahlprogramm", "kapitel", "seite", "bzw", "sowie", "dabei",
-    "cdu", "grüne", "spd", "afd", "müssen", "wollen", "sollen", "setzen",
-    "unser", "unserer", "unseren", "jahr", "jahre"
-}
-for word in custom_stop_words:
-    nlp.Defaults.stop_words.add(word)
+# Load the pre-configured spaCy model (with all federal stopwords already applied)
+print("Loading spaCy model and custom stopwords from config...")
+nlp = get_configured_nlp()
 
 def get_semantic_label(distance):
     """
