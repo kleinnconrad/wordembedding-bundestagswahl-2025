@@ -1,6 +1,8 @@
 import os
-import spacy
 from gensim.models import Word2Vec
+
+# Import your centralized NLP configuration
+from config import get_configured_nlp
 
 # --- Configuration & Pathing ---
 PARTIES = ["cdu", "gruene", "spd", "afd"]
@@ -20,25 +22,9 @@ MANUAL_OVERRIDES = {
     "afd": {}
 }
 
-# Load spaCy with the German model
-try:
-    nlp = spacy.load("de_core_news_sm", disable=["parser", "ner"])
-except OSError:
-    print("Error: Run 'python -m spacy download de_core_news_sm' first.")
-    exit(1)
-
-# --- FEDERAL CUSTOM STOP WORDS (Bundestagswahl) ---
-custom_stop_words = {
-    "deutschland", "bund", "bundesregierung", "bundestag", "regierung",
-    "wahlprogramm", "regierungsprogramm", "kapitel", "seite", "bzw", "sowie", "dabei",
-    "cdu", "csu", "union", "grüne", "spd", "afd", "fdp", 
-    "müssen", "wollen", "sollen", "setzen", "werden",
-    "unser", "unserer", "unseren", "jahr", "jahre", "ab"
-}
-
-for word in custom_stop_words:
-    nlp.Defaults.stop_words.add(word)
-    nlp.vocab[word].is_stop = True
+# Load the pre-configured spaCy model (with all federal stopwords already applied)
+print("Loading spaCy model and custom stopwords from config...")
+nlp = get_configured_nlp()
 
 def preprocess_text(text):
     """
