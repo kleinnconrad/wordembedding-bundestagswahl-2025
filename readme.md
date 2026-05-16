@@ -11,7 +11,7 @@ This repository implements a comparative NLP pipeline to analyze the semantic la
     * [The Objective Function](#the-objective-function)
     * [CBOW vs. Skip-gram](#cbow-vs-skip-gram)
     * [Optimization Techniques](#optimization-techniques)
-    * [Epoch Tuning: Balancing Over- and Underfitting](#epoch-tuning-balancing-over--and-underfitting)
+    * [Dynamic Hyperparameter Tuning](#dynamic-hyperparameter-tuning)
 4. [Linguistic Preprocessing](#linguistic-preprocessing)
 5. [Distance Metrics & Semantic Quantization](#distance-metrics--semantic-quantization)
 6. [Engineering Constraints & Small Corpus Variance](#engineering-constraints)
@@ -24,10 +24,10 @@ The project utilizes **Word2Vec**, a class of shallow, two-layer neural networks
 
 ## Data Engineering Pipeline
 The pipeline is designed with modularity and reproducibility in mind:
-*   **Ingestion:** PDF parsing via `pdfplumber` with coordinate-based bounding box filtering to eliminate structural noise (headers/footers).
-*   **Normalization:** Tokenization and Lemmatization via `spaCy`'s `de_core_news_sm` (Transformer-based pipeline) to reduce inflectional variance.
-*   **Vectorization:** Localized training of four distinct Word2Vec models using `Gensim`.
-*   **Interface:** A CLI tool utilizing Centroid-based phrase matching for multi-token queries.
+* **Ingestion:** PDF parsing via `pdfplumber` with coordinate-based bounding box filtering to eliminate structural noise (headers/footers).
+* **Normalization:** Tokenization and Lemmatization via `spaCy`'s `de_core_news_sm` (Transformer-based pipeline) to reduce inflectional variance.
+* **Vectorization:** Localized training of four distinct Word2Vec models using `Gensim`.
+* **Interface:** A CLI tool utilizing Centroid-based phrase matching for multi-token queries.
 
 ---
 
@@ -42,22 +42,28 @@ where $c$ is the training context window size. **The word vectors are essentiall
 
 ### CBOW vs. Skip-gram
 While the user may specify the architecture, the implementation nuances are critical:
-*   **CBOW (Continuous Bag of Words):** The model predicts the "center word" $w_t$ based on the sum/average of the surrounding context vectors. It is statistically faster and better for frequent words.
-*   **Skip-gram ($sg=1$):** Instead of predicting one center word, the model uses the center word to predict the surrounding context. 
-*   **Project Decision:** For the BW 2026 programs, **Skip-gram** is preferred. Skip-gram works better with small amounts of training data and represents rare political terms (e.g., "Zwangsfinanzierung" or "Netzstabilität") more accurately than CBOW.
+* **CBOW (Continuous Bag of Words):** The model predicts the "center word" $w_t$ based on the sum/average of the surrounding context vectors. It is statistically faster and better for frequent words.
+* **Skip-gram ($sg=1$):** Instead of predicting one center word, the model uses the center word to predict the surrounding context. 
+* **Project Decision:** For the BW programs, **Skip-gram** is preferred. Skip-gram works better with small amounts of training data and represents rare political terms (e.g., "Zwangsfinanzierung" or "Netzstabilität") more accurately than CBOW.
 
 ### Optimization Techniques
 To handle the computational cost of the Softmax function over a large vocabulary, Gensim utilizes **Negative Sampling (NEG)**. Instead of updating all weights for every sample, the model only updates the weights for the target word and a small number of "negative" (noise) words, significantly improving training efficiency on local machines.
 
-### Epoch Tuning: Balancing Over- and Underfitting
-The number of **epochs** (complete passes through the training data) is a critical hyperparameter for ensuring the stability of the vector space. In small corpora, the default 5 epochs often lead to **underfitting**, where the model fails to capture nuanced semantic relationships, leaving vectors in a state of high random distance. Conversely, setting epochs too high leads to **overfitting**, where the model begins to "memorize" specific phrasing, boilerplate text, or accidental co-occurrences. This results in **embedding collapse**, characterized by unnaturally low cosine distances (e.g., $<0.1$) where functionally unrelated words appear as near-identical synonyms. For this project, an increased epoch count is used to allow the model to converge on the specific rhetoric of each party without losing the ability to generalize semantic meaning.
+### Dynamic Hyperparameter Tuning
+Because the length of federal election programs varies drastically between parties (e.g., condensed summary manifestos vs. extensive 100+ page *Langfassungen*), applying static hyperparameters across all models leads to inconsistent vector spaces. To solve this, the pipeline implements a **Dynamic Hyperparameter Heuristic** based on the total token count of each corpus:
+
+* **Small Corpora (<15k tokens):** Require more passes (`epochs=12`) to sufficiently learn weights without underfitting, and a constrained dimensionality (`vector_size=60`) to prevent vector sparsity (the "Curse of Dimensionality").
+* **Medium Corpora (15k–30k tokens):** Use balanced defaults (`epochs=7`, `vector_size=100`).
+* **Large Corpora (>30k tokens):** (e.g., the program of *Die Grünen*). These are trained with fewer passes (`epochs=4`) to prevent overfitting (which causes embedding collapse and unnatural memorization of boilerplate text) and higher dimensions (`vector_size=120`) to capture richer semantic nuances. The `min_count` is also raised to filter out rare noise.
+
+This dynamic scaling ensures that each party's vector space accurately reflects its specific semantic landscape. Furthermore, the pipeline includes a **Manual Override** dictionary, allowing data engineers to bypass the automated heuristic and force specific parameters for targeted ablation studies.
 
 ---
 
 ## Linguistic Preprocessing
 In German NLP, simple tokenization is insufficient due to high morphological complexity and compound noun structures.
-*   **Lemmatization:** We map all word forms to their lemma (root) to ensure that "Steuern," "steuerlich," and "Steuerlast" contribute to the same vector coordinate.
-*   **Custom Stopword Filtering:** Standard NLP stopword lists are augmented with "Domain-Specific Noise" (e.g., *Baden-Württemberg*, *Landtag*, *Wahlprogramm*). Removing these prevents the vector space from collapsing toward geographically or administratively dominant tokens.
+* **Lemmatization:** We map all word forms to their lemma (root) to ensure that "Steuern," "steuerlich," and "Steuerlast" contribute to the same vector coordinate.
+* **Custom Stopword Filtering:** Standard NLP stopword lists are augmented with "Domain-Specific Noise" (e.g., *Deutschland*, *Regierungsprogramm*, *Wahlprogramm*). Removing these prevents the vector space from collapsing toward geographically or administratively dominant tokens.
 
 ---
 
@@ -86,7 +92,7 @@ To bridge the gap between raw data and political insight, we apply a quantizatio
 Data scientists should be aware that these models are trained on **Low-Resource Data**. Typical election programs contain 10k–50k tokens. 
 1.  **High Variance:** Small changes in hyperparameters (`min_count`, `window`) can lead to significant shifts in the vector space.
 2.  **No Pre-training:** These models are trained from scratch to capture *only* the specific party's bias, avoiding the "general language" bias of larger models like BERT or GPT.
-3.  **Stability:** We use a small `vector_size` (100) to prevent the "Curse of Dimensionality," where the vector space becomes too sparse for the small number of training samples.
+3.  **Stability:** We use a controlled `vector_size` to prevent the "Curse of Dimensionality," where the vector space becomes too sparse for the small number of training samples.
 
 ---
 
@@ -94,8 +100,5 @@ Data scientists should be aware that these models are trained on **Low-Resource 
 
 ### Setup
 ```bash
-pip install gensim spacy pdfplumber numpy scipy<1.13.0
+pip install -r requirements.txt
 python -m spacy download de_core_news_sm
-
-## Training Note
-Please note that due to a significant difference in the underlying text corpus size, the word embedding model for the **Grüne** (Greens) election program was trained with a different number of epochs compared to the other parties. This adjustment prevents overfitting or underfitting, ensuring the vector space accurately reflects their specific semantic landscape.
