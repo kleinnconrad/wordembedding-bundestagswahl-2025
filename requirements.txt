@@ -1,4 +1,4 @@
-gensim==4.3.2
+gensim==4.4.0
 spacy==3.8.14
 numpy
 pdfplumber==0.11.10
